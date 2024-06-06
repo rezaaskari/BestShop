@@ -1,6 +1,10 @@
-﻿using BestShop.ProductService.Domain.Entities;
+using BestShop.ProductService.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
+
+using System;
+using System.Linq;
+using AngleSharp.Dom;
 
 namespace BestShop.ProductService.Infrastructure.Persistence.Contexts;
 
@@ -14,20 +18,46 @@ public sealed class ApplicationDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
     public DbSet<Tag> Tags { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder builder)
+    public DbSet<TEntity> GetDbSet<TEntity>() where TEntity : class
     {
-        //Set Schema name
-        builder.HasDefaultSchema("BASE");
-
-        builder.Entity<Category>().Property<DateTime>("UpdateAt");
-        builder.Entity<Tag>().Property<DateTime>("UpdateAt");
-        builder.Entity<User>().Property<DateTime>("UpdateAt");
-
-        //Atomate Rgeistartion configration
-        builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
-
-        base.OnModelCreating(builder);
+        return Set<TEntity>();
     }
+
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Use Reflection to find all entity types
+        var entityTypes = Assembly.GetExecutingAssembly()
+            .GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Entity)));
+
+        foreach (var entityType in entityTypes)
+        {
+            // Define DbSet dynamically
+            modelBuilder.Entity(entityType);
+        }
+        
+       
+    }
+
+
+
+    //protected override void OnModelCreating(ModelBuilder builder)
+    //{
+    //    //Set Schema name
+    //    builder.HasDefaultSchema("BASE");
+
+    //    builder.Entity<Category>().Property<DateTime>("UpdateAt");
+    //    builder.Entity<Tag>().Property<DateTime>("UpdateAt");
+    //    builder.Entity<User>().Property<DateTime>("UpdateAt");
+
+    //    //Atomate Rgeistartion configration
+    //    builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+    //    base.OnModelCreating(builder);
+    //}
 
     public override int SaveChanges()
     {
